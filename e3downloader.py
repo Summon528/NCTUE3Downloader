@@ -125,7 +125,7 @@ for i in range(len(CourseId)):
     except FileExistsError:
         pass
     data = {"loginTicket": LoginTicket,
-            "courseId": CourseId[i], 'docType': '1'}
+            "courseId": CourseId[i], 'docType': '2'}
     r = requests.post(BASE_URL + 'GetMaterialDocList',
                       data=data, headers=HEADERS)
     root = xml.etree.ElementTree.fromstring(r.content)

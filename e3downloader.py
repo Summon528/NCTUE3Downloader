@@ -37,7 +37,7 @@ try:
     f = open('lastTime.txt', 'r')
     try:
         lastTime = datetime.datetime.strptime(f.read(), '%Y/%m/%d %H:%M:%S')
-        print("last run:" + datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+        print("last run:" + lastTime.strftime("%Y/%m/%d %H:%M:%S"))
     except:
         print("lastTime.txt is corrupted.")
         lastTime = datetime.datetime(1970, 1, 1, 0, 0, 0)

@@ -4,6 +4,7 @@ import urllib
 import os
 import datetime
 import sys
+import platform
 from multiprocessing import Queue
 
 
@@ -61,7 +62,7 @@ def downloadFile(url, replace, folder, path):
                     f.write(chunk)
             print('')
     else:
-        print('skip')
+        print('skipped')
 
 
 def downloadMaterial(docType, CourseName, CourseId, LoginTicket):
@@ -105,7 +106,8 @@ def downloadHomeWorkOrAnnouncement(HwOrAnn, CourseName, CourseId, LoginTicket):
     createFolder(typeName, CourseName)
     for listType in range(1, repeat + 1):
         data = {"loginTicket": LoginTicket,
-                "courseId": CourseId, "accountId": AccountId, 'listType': str(listType), 'bulType': str(listType)}
+                "courseId": CourseId, "accountId": AccountId,
+                'listType': str(listType), 'bulType': str(listType)}
         root = requestXML(path, data)
         if len(root) > 0:
             for k in root:
@@ -160,7 +162,11 @@ CourseId = []
 CourseName = []
 for i in root:
     CourseId.append(i[0].text)
-    CourseName.append(i[3].text)
+    if platform.system() == "Windows":
+        temp = i[3].text.translate(str.maketrans('\\/:*?"<>|', '         '))
+    else:
+        temp = i[3].text.translate(str.maketrans(' ', '\\'))
+    CourseName.append(temp)
 
 
 for i in range(len(CourseId)):

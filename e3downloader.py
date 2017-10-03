@@ -44,25 +44,28 @@ def downloadFile(url, replace, folder, path):
     fileName = fileName[fileName.find('=') + 2:fileName.find(',') - 1]
     fileName = urllib.parse.unquote(fileName)
     print(fileName)
-    segment = int(r.headers['content-length']) // 80
-    cnt = 0
-    if os.path.isfile(os.path.join(path, folder, fileName)) is False or replace:
-        with open(os.path.join(path, folder, fileName), 'wb') as f:
-            sum = 0
-            for chunk in r.iter_content(chunk_size=1024):
-                if sum > segment * cnt:
-                    cnt += 1
-                    print('#', end='', flush=True)
-                if segment < 1024:
-                    for k in range(((sum - (segment * cnt)) // segment)):
+    if int(r.headers['content-length']) < limit:
+        segment = int(r.headers['content-length']) // 80
+        cnt = 0
+        if os.path.isfile(os.path.join(path, folder, fileName)) is False or replace:
+            with open(os.path.join(path, folder, fileName), 'wb') as f:
+                sum = 0
+                for chunk in r.iter_content(chunk_size=1024):
+                    if sum > segment * cnt:
                         cnt += 1
                         print('#', end='', flush=True)
-                sum += 1024
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-            print('')
+                    if segment < 1024:
+                        for k in range(((sum - (segment * cnt)) // segment)):
+                            cnt += 1
+                            print('#', end='', flush=True)
+                    sum += 1024
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+                print('#' * (80-cnt)) 
+        else:
+            print('File already exists... Skipped')
     else:
-        print('skipped')
+        print('File too big... Skipped')
 
 
 def downloadMaterial(docType, CourseName, CourseId, LoginTicket):
@@ -88,7 +91,7 @@ def downloadMaterial(docType, CourseName, CourseId, LoginTicket):
                              path=CourseName, folder=typeName)
             else:
                 print(k[3].text)
-                print('skipped')
+                print('File not modified... Skipped')
 
 
 def downloadHomeWorkOrAnnouncement(HwOrAnn, CourseName, CourseId, LoginTicket):
@@ -120,7 +123,7 @@ def downloadHomeWorkOrAnnouncement(HwOrAnn, CourseName, CourseId, LoginTicket):
 try:
     ACCOUNT = sys.argv[1]
     PASSWORD = sys.argv[2]
-except IndexError:
+except:
     ACCOUNT = input('學號 ')
     PASSWORD = input('密碼 ')
 
@@ -139,6 +142,20 @@ while True:
         PASSWORD = input('密碼 ')
         continue
 
+if len(sys.argv) == 1:
+    try:
+        limit = int(input("下載檔案大小上限(MB) "))
+        limit *= 1048576
+    except:
+        limit = 1024 * 1048576
+        print('Default file size limit to 1GB')
+else:
+    try:
+        limit = int(sys.argv[3])
+        limit *= 1048576
+    except:
+        limit = 1024 * 1048576
+        print('Default file size limit to 1GB')
 
 try:
     f = open('lastTime.txt', 'r')
@@ -165,7 +182,7 @@ for i in root:
     if platform.system() == "Windows":
         temp = i[3].text.translate(str.maketrans('\\/:*?"<>|', '         '))
     else:
-        temp = i[3].text.translate(str.maketrans(' ', '\\'))
+        temp = i[3].text.translate(str.maketrans('\\', ' '))
     CourseName.append(temp)
 
 

@@ -61,7 +61,7 @@ def downloadFile(url, replace, folder, path):
                     sum += 1024
                     if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
-                print('#' * (80-cnt)) 
+                print('#' * (80 - cnt))
         else:
             print('File already exists... Skipped')
     else:
@@ -114,47 +114,53 @@ def downloadHomeWorkOrAnnouncement(HwOrAnn, CourseName, CourseId, LoginTicket):
         root = requestXML(path, data)
         if len(root) > 0:
             for k in root:
-                for j in k[index]:
-                    if j.text is not None:
-                        downloadFile(j.text[:-1], replace=False,
-                                     path=CourseName, folder=typeName)
+                for j in range(len(k[index])):
+                    if k[index][j].text is not None:
+                        print(k[index + 4][j].text)
+                        if fileModified(k[index + 4][j].text[:-1]):
+                            downloadFile(k[index][j].text[:-1], replace=True,
+                                         path=CourseName, folder=typeName)
+                        else:
+                            print(k[index - 1][j].text)
+                            print('File not modified... Skipped')
 
 
 try:
     ACCOUNT = sys.argv[1]
     PASSWORD = sys.argv[2]
-except:
+except IndexError:
     ACCOUNT = input('學號 ')
     PASSWORD = input('密碼 ')
 
 
 while True:
-    try:
-        data = {"account": ACCOUNT, "password": PASSWORD}
-        root = requestXML('Login', data)
-        LoginTicket = root[0].text
-        AccountId = root[1].text
-        print("Login Success")
-        break
-    except:
+    data = {"account": ACCOUNT, "password": PASSWORD}
+    root = requestXML('Login', data)
+    if len(root) <= 1:
         print("Login Fail")
         ACCOUNT = input('學號 ')
         PASSWORD = input('密碼 ')
         continue
+    LoginTicket = root[0].text
+    AccountId = root[1].text
+    print("Login Success")
+    break
+
 
 if len(sys.argv) == 1:
     try:
         limit = int(input("下載檔案大小上限(MB) "))
         limit *= 1048576
-    except:
+    except Exception:
         limit = 1024 * 1048576
         print('Default file size limit to 1GB')
 else:
     try:
         limit = int(sys.argv[3])
         limit *= 1048576
-    except:
+    except Exception as e:
         limit = 1024 * 1048576
+        print(e)
         print('Default file size limit to 1GB')
 
 try:
@@ -162,7 +168,8 @@ try:
     try:
         lastTime = datetime.datetime.strptime(f.read(), '%Y/%m/%d %H:%M:%S')
         print("last run:" + lastTime.strftime("%Y/%m/%d %H:%M:%S"))
-    except:
+    except Exception as e:
+        print(e)
         print("lastTime.txt is corrupted.")
         lastTime = datetime.datetime(1970, 1, 1, 0, 0, 0)
     f.close()

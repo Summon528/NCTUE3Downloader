@@ -54,7 +54,7 @@ def downloadFile(url, replace, folder, path):
                     if sum > segment * cnt:
                         cnt += 1
                         print('#', end='', flush=True)
-                    if segment < 1024:
+                    if segment < 1024 and segment != 0:
                         for k in range(((sum - (segment * cnt)) // segment)):
                             cnt += 1
                             print('#', end='', flush=True)

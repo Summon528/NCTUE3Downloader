@@ -21,7 +21,6 @@ class Downloader():
         self.progressbar = tqdm(desc='File Found', position=0)
 
     async def worker(self, idx) -> None:
-        timeout = aiohttp.client.ClientTimeout(total=10)
         while True:
             file: E3File = await self.queue.get()
             short_file_name = ''.join(filter(lambda x: x in self.eng_char,
@@ -39,12 +38,7 @@ class Downloader():
                 position=idx+1,
                 ascii = platform.system() == 'Windows'
             )
-            try:
-                resp = await self.session.get(file.url, timeout=timeout)
-            except asyncio.TimeoutError:
-                progressbar.close()
-                self.queue.task_done()
-                continue
+            resp = await self.session.get(file.url)
             file_dir = os.path.join('e3', file.course_name)
             if not os.path.exists(file_dir):
                 os.makedirs(file_dir)

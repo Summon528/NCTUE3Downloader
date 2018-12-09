@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import time
 from getpass import getpass
 from aiohttp import ClientSession
@@ -98,7 +99,8 @@ class NewE3():
                 sha1_hash2(folder.folder_id, file['filename']),
                 file['fileurl']+"&token="+token,
                 file['timemodified']
-            ) for file in files)
+            ) for file in files if not re.match(r'.*\.[cC]$', file['filename']))
+        # Apparently new e3 cant handle any filename that endswith '.c'
 
     async def __get_assign_files(self,
                                  token: str,
@@ -122,7 +124,8 @@ class NewE3():
             )
             for course in resp_json['courses']
             for assignment in course['assignments']
-            for file in assignment['introattachments'])
+            for file in assignment['introattachments']
+            if not re.match(r'.*\.[cC]$', file['filename']))
 
     async def all_files(self,
                         username: str,

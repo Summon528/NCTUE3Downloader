@@ -4,6 +4,7 @@ import string
 import aiohttp
 import shelve
 import os
+import platform
 from tqdm import tqdm
 from models import E3File
 from typing import List, Coroutine, Tuple
@@ -35,7 +36,8 @@ class Downloader():
                 total=float('inf'),
                 unit_scale=True,
                 unit_divisor=1024,
-                position=idx+1
+                position=idx+1,
+                ascii = platform.system() == 'Windows'
             )
             try:
                 resp = await self.session.get(file.url, timeout=timeout)

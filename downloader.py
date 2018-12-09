@@ -20,7 +20,7 @@ class Downloader():
         self.progressbar = tqdm(desc='File Found', position=0)
 
     async def worker(self, idx) -> None:
-        timeout = aiohttp.ClientTimeout(total=10)
+        timeout = aiohttp.client.ClientTimeout(total=10)
         while True:
             file: E3File = await self.queue.get()
             short_file_name = ''.join(filter(lambda x: x in self.eng_char,

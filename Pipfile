@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+mypy = "*"
+pylint = "*"
+autopep8 = "*"
+rope = "*"
+
+[packages]
+aiohttp = "*"
+beautifulsoup4 = "*"
+aiostream = "*"
+tqdm = "*"
+
+[requires]
+python_version = "3.7"

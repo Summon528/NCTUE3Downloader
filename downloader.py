@@ -40,6 +40,7 @@ class Downloader():
             try:
                 resp = await self.session.get(file.url, timeout=timeout)
             except asyncio.TimeoutError:
+                progressbar.close()
                 self.queue.task_done()
                 continue
             file_dir = os.path.join('e3', file.course_name)

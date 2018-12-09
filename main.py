@@ -18,8 +18,7 @@ async def main():
                             old_e3.all_files(username, old_e3_pwd
                                              )).stream() as files:
         async for file in files:
-            if "網路程式設計概論" not in file.course_name:
-                downloader.add_file(file)
+            downloader.add_file(file)
     await downloader.done()
 
 if __name__ == "__main__":

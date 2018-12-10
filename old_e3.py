@@ -3,13 +3,12 @@ import json
 import hashlib
 import asyncio
 from getpass import getpass
-from asp_session import ASPSession
-from aiohttp import ClientSession
-from aiostream import stream
 from datetime import datetime
-from models import Course, Folder, E3File, FolderType
 from typing import Iterable, NamedTuple, AsyncIterable
+from aiostream import stream
 from bs4 import BeautifulSoup
+from models import Course, E3File, FolderType
+from asp_session import ASPSession
 
 
 class OldE3():
@@ -22,7 +21,7 @@ class OldE3():
         data_navigator_el_id: str
 
     def __init__(self):
-        self.__URL = 'https://e3.nctu.edu.tw/NCTU_Easy_E3P/lms31'
+        self.__url = 'https://e3.nctu.edu.tw/NCTU_Easy_E3P/lms31'
         self.__folder_properties = [
             self.FolderProperty(
                 FolderType.HANDOUT,
@@ -44,8 +43,8 @@ class OldE3():
                     session: ASPSession,
                     username: str,
                     password: str) -> None:
-        await session.get(self.__URL+'/login.aspx')
-        await session.post(self.__URL+'/login.aspx', data={
+        await session.get(self.__url+'/login.aspx')
+        await session.post(self.__url+'/login.aspx', data={
             'txtLoginId': username,
             'txtLoginPwd': password,
             'btnLogin.x': '0',
@@ -54,14 +53,14 @@ class OldE3():
 
     async def __get_course_list(self,
                                 session: ASPSession) -> Iterable[Course]:
-        soup = await session.get(self.__URL+'/enter_course_index.aspx')
+        soup = await session.get(self.__url+'/enter_course_index.aspx')
         return (Course(el['id'].replace('_', '$'), el.text)
                 for el in soup.find(id='ctl00_ContentPlaceHolder1_gvCourse')('a'))
 
     async def __to_course_page(self,
                                session: ASPSession,
                                course: Course) -> None:
-        await session.post(self.__URL+'/enter_course_index.aspx', data={
+        await session.post(self.__url+'/enter_course_index.aspx', data={
             '__EVENTTARGET': course.course_id
         })
 
@@ -83,8 +82,9 @@ class OldE3():
                         file.text,
                         course.course_name,
                         hashlib.sha1(matched.group(1).encode()).hexdigest(),
-                        self.__URL +
-                        f'/common_view_standalone_file.ashx?AttachMediaId={matched.group(1)}&CourseId={matched.group(2)}',
+                        self.__url +
+                        f'/common_view_standalone_file.ashx?AttachMediaId={matched.group(1)}'
+                        f'&CourseId={matched.group(2)}',
                         int(datetime.strptime(
                             td_els[2].text, '%Y/%m/%d').timestamp())
                     )
@@ -92,7 +92,7 @@ class OldE3():
     async def __get_materials(self,
                               session: ASPSession,
                               course: Course) -> AsyncIterable[E3File]:
-        soup = await session.get(self.__URL+'/stu_materials_document_list.aspx')
+        soup = await session.get(self.__url+'/stu_materials_document_list.aspx')
         for folder_property in self.__folder_properties:
             data_navigator_text = soup.find(
                 id=folder_property.data_navigator_el_id).text
@@ -110,7 +110,7 @@ class OldE3():
                                         folder_property: FolderProperty,
                                         course: Course) -> Iterable[E3File]:
         resp = await session.post(
-            self.__URL+'/stu_materials_document_list.aspx?Anthem_CallBack=true', data={
+            self.__url+'/stu_materials_document_list.aspx?Anthem_CallBack=true', data={
                 'Anthem_UpdatePage': 'true',
                 '__EVENTTARGET': folder_property.event_target,
                 'ctl00$ContentPlaceHolder1$EasyView': 'rdoView1',
@@ -124,7 +124,7 @@ class OldE3():
     async def __get_assign_files(self,
                                  session: ASPSession,
                                  course: Course) -> AsyncIterable[E3File]:
-        soup = await session.get(self.__URL+'/stu_materials_homework_list.aspx')
+        soup = await session.get(self.__url+'/stu_materials_homework_list.aspx')
         for table_el_id in ['ctl00_ContentPlaceHolder1_dgHandin',
                             'ctl00_ContentPlaceHolder1_dgJudge',
                             'ctl00_ContentPlaceHolder1_dgLate',
@@ -151,11 +151,12 @@ class OldE3():
                                   session: ASPSession,
                                   assign_id: str,
                                   course: Course) -> Iterable[E3File]:
-        resp = await session.post(self.__URL+'/ajaxpro/WebPageBase,App_Code.ashx', headers={
+        resp = await session.post(self.__url+'/ajaxpro/WebPageBase,App_Code.ashx', headers={
             'X-AjaxPro-Method': 'setToken'
         })
         token = json.loads(await resp.text())['value']
-        soup = await session.get(self.__URL+f'/dialog_stu_homework_view.aspx?crsHwkId={assign_id}&TokenId={token}')
+        soup = await session.get(self.__url +
+                                 f'/dialog_stu_homework_view.aspx?crsHwkId={assign_id}&TokenId={token}')
         files = soup.find(
             id='Anthem_ctl00_ContentPlaceHolder1_HwkInfo1_fileAttachManageLite_rpFileList__')
 
@@ -164,7 +165,7 @@ class OldE3():
                 for file in files('a'):
                     file_id = re.search(
                         r"AttachMediaId=([^;,'&]*)", file['href']).group(1)
-                    file_url = self.__URL+file['href'].replace('common_get_content_media_attach_file.ashx',
+                    file_url = self.__url+file['href'].replace('common_get_content_media_attach_file.ashx',
                                                                '/common_view_standalone_file.ashx')
                     yield E3File(
                         file.text,
@@ -183,7 +184,7 @@ class OldE3():
         if not session:
             session = ASPSession()
             await self.login(session, username, password)
-            await session.get(self.__URL+'/enter_course_index.aspx')
+            await session.get(self.__url+'/enter_course_index.aspx')
         await self.__to_course_page(session, course)
         files = self.__get_materials(session, course)
         async for file in files:

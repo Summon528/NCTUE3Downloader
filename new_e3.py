@@ -3,8 +3,8 @@ import json
 import re
 import time
 from getpass import getpass
+from typing import Dict, Iterable, AsyncIterable
 from aiohttp import ClientSession
-from typing import Tuple, List, Optional, Dict, Iterable, AsyncIterable
 from models import E3File, Folder, Course, FolderType
 from utils import sha1_hash2
 
@@ -12,7 +12,7 @@ from utils import sha1_hash2
 class NewE3():
 
     def __init__(self):
-        self.__API_URL = "https://e3new.nctu.edu.tw/webservice/rest/server.php?moodlewsrestformat=json"
+        self.__api_url = "https://e3new.nctu.edu.tw/webservice/rest/server.php?moodlewsrestformat=json"
         self.session = ClientSession()
 
     async def get_token(self,
@@ -28,7 +28,7 @@ class NewE3():
     async def get_userid(self,
                          username: str,
                          token: str) -> str:
-        resp = await self.session.post(self.__API_URL, data={
+        resp = await self.session.post(self.__api_url, data={
             'wsfunction': 'core_user_get_users_by_field',
             'values[0]': username,
             'field': 'username',
@@ -36,7 +36,8 @@ class NewE3():
         })
         return json.loads(await resp.text())[0]['id']
 
-    def __scrub_course_name(self, course_name: str) -> str:
+    @staticmethod
+    def __scrub_course_name(course_name: str) -> str:
         try:
             return course_name.split('.')[2].split()[0]
         except IndexError:
@@ -45,7 +46,7 @@ class NewE3():
     async def __get_course_list(self,
                                 userid: str,
                                 token: str) -> Iterable[Course]:
-        resp = await self.session.post(self.__API_URL, data={
+        resp = await self.session.post(self.__api_url, data={
             'wsfunction': 'core_enrol_get_users_courses',
             'userid': userid,
             'wstoken': token
@@ -66,7 +67,7 @@ class NewE3():
         }
         for idx, (courseid, _) in enumerate(courses):
             payload[f'courseids[{idx}]'] = courseid
-        resp = await self.session.post(self.__API_URL, data=payload)
+        resp = await self.session.post(self.__api_url, data=payload)
         folders = json.loads(await resp.text())['folders']
         return (
             Folder(
@@ -82,7 +83,7 @@ class NewE3():
                               token: str,
                               course_name: str,
                               folder: Folder) -> Iterable[E3File]:
-        resp = await self.session.post(self.__API_URL, data={
+        resp = await self.session.post(self.__api_url, data={
             'courseid': folder.course_id,
             'options[0][value]': folder.folder_id,
             'options[0][name]': 'cmid',
@@ -112,7 +113,7 @@ class NewE3():
         }
         for idx, (courseid, _) in enumerate(courses):
             payload[f'courseids[{idx}]'] = courseid
-        resp = await self.session.post(self.__API_URL, data=payload)
+        resp = await self.session.post(self.__api_url, data=payload)
         resp_json = json.loads(await resp.text())
         return (
             E3File(

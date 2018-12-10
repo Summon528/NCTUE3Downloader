@@ -1,7 +1,7 @@
-from aiohttp import ClientSession
+from typing import Union, Any
 from yarl import URL
 from bs4 import BeautifulSoup
-from typing import Union, Any
+from aiohttp import ClientSession
 
 StrOrURL = Union[str, URL]
 
@@ -25,7 +25,8 @@ class ASPSession():
                    *, data: Any = {}, allow_redirects: bool = False, **kwargs):
         if self.__view_state:
             data['__VIEWSTATE'] = self.__view_state
-        return await self.__client_session.post(url, data=data, allow_redirects=allow_redirects, **kwargs)
+        return await self.__client_session.post(url, data=data,
+                                                allow_redirects=allow_redirects, **kwargs)
 
     async def close(self) -> None:
         await self.__client_session.close()

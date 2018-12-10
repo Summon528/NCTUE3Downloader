@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 from enum import Enum
+from dataclasses import dataclass
 
 
 class FolderType(Enum):

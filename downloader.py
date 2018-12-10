@@ -1,22 +1,20 @@
 import asyncio
-import math
 import string
-import aiohttp
 import shelve
 import os
 import traceback
 import platform
+import aiohttp
 from tqdm import tqdm
 from models import E3File
-from typing import List, Coroutine, Tuple
-import sys
 
 
 class Downloader():
+    eng_char = set(string.printable)
+
     def __init__(self) -> None:
         self.queue: 'asyncio.Queue[E3File]' = asyncio.Queue()
         self.session = aiohttp.ClientSession()
-        self.eng_char = set(string.printable)
         self.tasks = [asyncio.create_task(self.worker(i)) for i in range(4)]
         self.db = shelve.open('db.shelve')
         self.total = 0
@@ -61,13 +59,14 @@ class Downloader():
                     os.makedirs(file_dir)
                 total_size = int(resp.headers.get('content-length', 0))
                 progressbar.total = total_size
-                with open(os.path.join(file_dir, file.name), mode='wb') as f, progressbar:
-                    while True:
-                        chunk = await resp.content.read(1024)
-                        if not chunk:
-                            break
-                        progressbar.update(len(chunk))
-                        f.write(chunk)
+                with open(os.path.join(file_dir, file.name), mode='wb') as f:
+                    with progressbar:
+                        while True:
+                            chunk = await resp.content.read(1024)
+                            if not chunk:
+                                break
+                            progressbar.update(len(chunk))
+                            f.write(chunk)
                 self.processed += 1
                 self.update_process()
                 self.db[file.hash_val] = file.timemodified

@@ -1,6 +1,5 @@
 import asyncio
 from getpass import getpass
-from multiprocessing import Pool
 from aiostream import stream
 from new_e3 import NewE3
 from old_e3 import OldE3

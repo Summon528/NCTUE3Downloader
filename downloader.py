@@ -22,7 +22,7 @@ class Downloader():
         self.progressbar = tqdm(position=0, bar_format='{desc}', total=1)
         self.progressbar.set_description_str('Initializing...')
 
-    def update_process(self):
+    def update_process(self) -> None:
         self.progressbar.set_description_str(
             f'File processed: {self.processed}/{self.total}')
 
@@ -32,12 +32,6 @@ class Downloader():
             try:
                 short_file_name = ''.join(filter(lambda x: x in self.eng_char,
                                                  file.name))[:25]
-                if file.timemodified is None and self.db.get(file.hash_val, -1) != -1 \
-                        or file.timemodified == self.db.get(file.hash_val, -1):
-                    self.processed += 1
-                    self.update_process()
-                    self.queue.task_done()
-                    continue
                 progressbar = tqdm(
                     desc=short_file_name,
                     unit='B',
@@ -82,15 +76,20 @@ class Downloader():
                 self.queue.task_done()
                 continue
 
-    def add_file(self, file: E3File):
+    def add_file(self, file: E3File) -> None:
         self.total += 1
+        if file.timemodified is None and self.db.get(file.hash_val, -1) != -1 \
+                or file.timemodified == self.db.get(file.hash_val, -1):
+            self.processed += 1
+        else:
+            self.queue.put_nowait(file)
         self.update_process()
-        self.queue.put_nowait(file)
 
-    async def done(self):
+    async def done(self) -> None:
         await self.queue.join()
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
         await self.session.close()
+        self.db.close()
         self.progressbar.close()

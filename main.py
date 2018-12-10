@@ -6,7 +6,7 @@ from old_e3 import OldE3
 from downloader import Downloader
 
 
-async def main():
+async def main() -> None:
     username = input('StudentID: ')
     old_e3_pwd = getpass('Old E3 Password: ')
     new_e3_pwd = getpass('New E3 Password: ')
@@ -14,8 +14,7 @@ async def main():
     old_e3 = OldE3()
     downloader = Downloader()
     async with stream.merge(new_e3.all_files(username, new_e3_pwd),
-                            old_e3.all_files(username, old_e3_pwd
-                                             )).stream() as files:
+                            old_e3.all_files(username, old_e3_pwd)).stream() as files:
         async for file in files:
             downloader.add_file(file)
     await downloader.done()

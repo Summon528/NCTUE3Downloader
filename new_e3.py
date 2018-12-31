@@ -9,26 +9,28 @@ from models import E3File, Folder, Course, FolderType
 from utils import sha1_hash2
 
 
-class NewE3():
+class NewE3:
 
     def __init__(self):
-        self.__api_url = "https://e3new.nctu.edu.tw/webservice/rest/server.php?moodlewsrestformat=json"
-        self.session = ClientSession()
+        self._api_url = "https://e3new.nctu.edu.tw/webservice/rest/server.php?moodlewsrestformat=json"
+        self._session = None
+        self.token = None
+        self.userid = None
 
-    async def get_token(self,
-                        username: str,
-                        password: str) -> str:
-        resp = await self.session.post('https://e3new.nctu.edu.tw/login/token.php', data={
+    async def _get_token(self,
+                         username: str,
+                         password: str) -> str:
+        resp = await self._session.post('https://e3new.nctu.edu.tw/login/token.php', data={
             'username': username,
             'password': password,
             'service': 'moodle_mobile_app'
         })
         return json.loads(await resp.text())['token']
 
-    async def get_userid(self,
-                         username: str,
-                         token: str) -> str:
-        resp = await self.session.post(self.__api_url, data={
+    async def _get_userid(self,
+                          username: str,
+                          token: str) -> str:
+        resp = await self._session.post(self._api_url, data={
             'wsfunction': 'core_user_get_users_by_field',
             'values[0]': username,
             'field': 'username',
@@ -37,7 +39,7 @@ class NewE3():
         return json.loads(await resp.text())[0]['id']
 
     @staticmethod
-    def __scrub_course_name(course_name: str) -> str:
+    def _scrub_course_name(course_name: str) -> str:
         try:
             return course_name.split('.')[2].split()[0]
         except IndexError:
@@ -46,7 +48,7 @@ class NewE3():
     async def __get_course_list(self,
                                 userid: str,
                                 token: str) -> Iterable[Course]:
-        resp = await self.session.post(self.__api_url, data={
+        resp = await self._session.post(self._api_url, data={
             'wsfunction': 'core_enrol_get_users_courses',
             'userid': userid,
             'wstoken': token
@@ -55,19 +57,19 @@ class NewE3():
         return (
             Course(
                 str(course['id']),
-                self.__scrub_course_name(course['fullname'])
+                self._scrub_course_name(course['fullname'])
             ) for course in resp_json if course['enddate'] > time.time())
 
-    async def __get_folders(self,
-                            token: str,
-                            courses: Iterable[Course]) -> Iterable[Folder]:
+    async def _get_folders(self,
+                           token: str,
+                           courses: Iterable[Course]) -> Iterable[Folder]:
         payload = {
             'wsfunction': 'mod_folder_get_folders_by_courses',
             'wstoken': token,
         }
         for idx, (courseid, _) in enumerate(courses):
             payload[f'courseids[{idx}]'] = courseid
-        resp = await self.session.post(self.__api_url, data=payload)
+        resp = await self._session.post(self._api_url, data=payload)
         folders = json.loads(await resp.text())['folders']
         return (
             Folder(
@@ -79,11 +81,11 @@ class NewE3():
                 str(folder['course']),
             ) for folder in folders)
 
-    async def __get_materials(self,
-                              token: str,
-                              course_name: str,
-                              folder: Folder) -> Iterable[E3File]:
-        resp = await self.session.post(self.__api_url, data={
+    async def _get_materials(self,
+                             token: str,
+                             course_name: str,
+                             folder: Folder) -> Iterable[E3File]:
+        resp = await self._session.post(self._api_url, data={
             'courseid': folder.course_id,
             'options[0][value]': folder.folder_id,
             'options[0][name]': 'cmid',
@@ -98,29 +100,29 @@ class NewE3():
                 file['filename'],
                 course_name,
                 sha1_hash2(folder.folder_id, file['filename']),
-                file['fileurl']+"&token="+token,
+                file['fileurl'] + "&token=" + token,
                 file['timemodified']
             ) for file in files if not re.match(r'.*\.[cC]$', file['filename']))
         # Apparently new e3 cant handle any filename that endswith '.c'
 
-    async def __get_assign_files(self,
-                                 token: str,
-                                 course_dict: Dict[str, str],
-                                 courses: Iterable[Course]) -> Iterable[E3File]:
+    async def _get_assign_files(self,
+                                token: str,
+                                course_dict: Dict[str, str],
+                                courses: Iterable[Course]) -> Iterable[E3File]:
         payload = {
             'wsfunction': 'mod_assign_get_assignments',
             'wstoken': token,
         }
         for idx, (courseid, _) in enumerate(courses):
             payload[f'courseids[{idx}]'] = courseid
-        resp = await self.session.post(self.__api_url, data=payload)
+        resp = await self._session.post(self._api_url, data=payload)
         resp_json = json.loads(await resp.text())
         return (
             E3File(
                 file['filename'],
                 course_dict[str(course['id'])],
                 sha1_hash2(str(assignment['id']), file['filename']),
-                file['fileurl']+"?token="+token,
+                file['fileurl'] + "?token=" + token,
                 file['timemodified']
             )
             for course in resp_json['courses']
@@ -128,30 +130,44 @@ class NewE3():
             for file in assignment['introattachments']
             if not re.match(r'.*\.[cC]$', file['filename']))
 
-    async def all_files(self,
-                        username: str,
-                        password: str) -> AsyncIterable[E3File]:
-        token = await self.get_token(username, password)
-        userid = await self.get_userid(username, token)
-        courses = list(await self.__get_course_list(userid, token))
+    async def login(self,
+                    username: str,
+                    password: str) -> bool:
+        self._session = ClientSession()
+        try:
+            self.token = await self._get_token(username, password)
+        except KeyError:
+            await self._session.close()
+            return False
+        self.userid = await self._get_userid(username, self.token)
+        return True
+
+    async def all_files(self) -> AsyncIterable[E3File]:
+        if self.token is None:
+            raise RuntimeError("Please Login First")
+        courses = list(await self.__get_course_list(self.userid, self.token))
         course_dict = dict(courses)
-        course_folders = await self.__get_folders(token, courses)
-        futures = [self.__get_materials(token, course_dict[i.course_id], i)
+        course_folders = await self._get_folders(self.token, courses)
+        futures = [self._get_materials(self.token, course_dict[i.course_id], i)
                    for i in course_folders]
-        futures.append(self.__get_assign_files(token, course_dict, courses))
+        futures.append(self._get_assign_files(self.token, course_dict, courses))
         for future in asyncio.as_completed(futures):
             files = await future
             for file in files:
                 yield file
-        await self.session.close()
+        await self._session.close()
 
 
 async def main() -> None:
     new_e3 = NewE3()
-    username = input('StudentID: ')
-    password = getpass('Password: ')
-    async for file in new_e3.all_files(username, password):
+    while True:
+        username = input('StudentID: ')
+        password = getpass('Password: ')
+        if await new_e3.login(username, password):
+            break
+    async for file in new_e3.all_files():
         print(file)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

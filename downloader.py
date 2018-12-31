@@ -9,10 +9,10 @@ from tqdm import tqdm
 from models import E3File
 
 
-class Downloader():
+class Downloader:
     eng_char = set(string.printable)
 
-    def __init__(self) -> None:
+    def __init__(self, download_path) -> None:
         self.queue: 'asyncio.Queue[E3File]' = asyncio.Queue()
         self.session = aiohttp.ClientSession()
         self.tasks = [asyncio.create_task(self.worker(i)) for i in range(4)]
@@ -21,8 +21,9 @@ class Downloader():
         self.processed = 0
         self.progressbar = tqdm(position=0, bar_format='{desc}', total=1)
         self.progressbar.set_description_str('Initializing...')
+        self.download_path = download_path
 
-    def update_process(self) -> None:
+    def update_bar(self) -> None:
         self.progressbar.set_description_str(
             f'File processed: {self.processed}/{self.total}')
 
@@ -38,7 +39,7 @@ class Downloader():
                     total=float('inf'),
                     unit_scale=True,
                     unit_divisor=1024,
-                    position=idx+1,
+                    position=idx + 1,
                     ascii=platform.system() == 'Windows'
                 )
                 try:
@@ -48,7 +49,7 @@ class Downloader():
                     self.queue.task_done()
                     progressbar.close()
                     continue
-                file_dir = os.path.join('e3', file.course_name)
+                file_dir = os.path.join(self.download_path, file.course_name)
                 if not os.path.exists(file_dir):
                     os.makedirs(file_dir)
                 total_size = int(resp.headers.get('content-length', 0))
@@ -62,17 +63,17 @@ class Downloader():
                             progressbar.update(len(chunk))
                             f.write(chunk)
                 self.processed += 1
-                self.update_process()
+                self.update_bar()
                 self.db[file.hash_val] = file.timemodified
                 self.queue.task_done()
             except Exception:
-                tqdm.write('-'*5)
-                tqdm.write(f'Exception occured '
+                tqdm.write('-' * 5)
+                tqdm.write(f'Exception occurred '
                            f'when downloading "{file.name}"')
                 tb = traceback.format_exc()
                 tqdm.write(tb)
                 self.processed += 1
-                self.update_process()
+                self.update_bar()
                 self.queue.task_done()
                 continue
 
@@ -83,7 +84,7 @@ class Downloader():
             self.processed += 1
         else:
             self.queue.put_nowait(file)
-        self.update_process()
+        self.update_bar()
 
     async def done(self) -> None:
         await self.queue.join()

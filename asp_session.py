@@ -6,7 +6,7 @@ from aiohttp import ClientSession
 StrOrURL = Union[str, URL]
 
 
-class ASPSession():
+class ASPSession:
     def __init__(self):
         self.__view_state = ""
         self.__client_session = ClientSession()
@@ -22,7 +22,9 @@ class ASPSession():
         return soup
 
     async def post(self, url: StrOrURL,
-                   *, data: Any = {}, allow_redirects: bool = False, **kwargs):
+                   *, data: Any = None, allow_redirects: bool = False, **kwargs):
+        if data is None:
+            data = {}
         if self.__view_state:
             data['__VIEWSTATE'] = self.__view_state
         return await self.__client_session.post(url, data=data,

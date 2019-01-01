@@ -16,7 +16,9 @@ class Downloader:
         self.queue: 'asyncio.Queue[E3File]' = asyncio.Queue()
         self.session = aiohttp.ClientSession()
         self.tasks = [asyncio.create_task(self.worker(i)) for i in range(4)]
-        self.db = shelve.open('db.shelve')
+        if not os.path.exists(download_path):
+            os.makedirs(download_path)
+        self.db = shelve.open(os.path.join(download_path, 'db.shelve'))
         self.total = 0
         self.processed = 0
         self.progressbar = tqdm(position=0, bar_format='{desc}', total=1)

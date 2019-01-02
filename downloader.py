@@ -16,6 +16,7 @@ class Downloader:
         self.queue: 'asyncio.Queue[E3File]' = asyncio.Queue()
         self.session = aiohttp.ClientSession()
         self.tasks = [asyncio.create_task(self.worker(i)) for i in range(4)]
+        download_path = os.path.expanduser(download_path)
         if not os.path.exists(download_path):
             os.makedirs(download_path)
         self.db = shelve.open(os.path.join(download_path, 'db.shelve'))

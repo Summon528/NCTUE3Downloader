@@ -1,10 +1,17 @@
 import asyncio
 import json
+import os
+from oauth2client import file as oauth_file
+from oauth2client import client, tools
 from getpass import getpass
 from aiostream import stream
 from new_e3 import NewE3
 from old_e3 import OldE3
 from downloader import Downloader
+from gdrive import GDrive
+
+
+SCOPES = "https://www.googleapis.com/auth/drive"
 
 
 async def main() -> None:
@@ -18,6 +25,15 @@ async def main() -> None:
     old_e3_pwd = config.get("oldE3Password", "")
     new_e3_pwd = config.get("newE3Password", "")
     download_path = config.get("downloadPath", "e3")
+    gdrive_enable = config.get("gdrive_enable", False)
+    download_path = os.path.expanduser(download_path)
+
+    if gdrive_enable:
+        store = oauth_file.Storage("token.json")
+        creds = store.get()
+        if not creds or creds.invalid:
+            flow = client.flow_from_clientsecrets("credentials.json", SCOPES)
+            creds = tools.run_flow(flow, store)
 
     while True:
         if username == "":
@@ -44,6 +60,10 @@ async def main() -> None:
         async for file in files:
             downloader.add_file(file)
     await downloader.done()
+
+    if gdrive_enable:
+        gdirve_client = GDrive(download_path)
+        await gdirve_client.upload()
 
 
 if __name__ == "__main__":

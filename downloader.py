@@ -3,6 +3,7 @@ import string
 import shelve
 import os
 import traceback
+import hashlib
 import platform
 import aiohttp
 from tqdm import tqdm
@@ -16,10 +17,10 @@ class Downloader:
         self.queue: "asyncio.Queue[E3File]" = asyncio.Queue()
         self.session = aiohttp.ClientSession()
         self.tasks = [asyncio.create_task(self.worker(i)) for i in range(4)]
-        download_path = os.path.expanduser(download_path)
         if not os.path.exists(download_path):
             os.makedirs(download_path)
         self.db = shelve.open(os.path.join(download_path, "db.shelve"))
+        self.md5_db = shelve.open(os.path.join(download_path, "md5_db.shelve"))
         self.total = 0
         self.processed = 0
         self.progressbar = tqdm(position=0, bar_format="{desc}", total=1)
@@ -28,7 +29,7 @@ class Downloader:
 
     def update_bar(self) -> None:
         self.progressbar.set_description_str(
-            f"File processed: {self.processed}/{self.total}"
+            f"Download - File processed: {self.processed}/{self.total}"
         )
 
     async def worker(self, idx) -> None:
@@ -59,7 +60,13 @@ class Downloader:
                     os.makedirs(file_dir)
                 total_size = int(resp.headers.get("content-length", 0))
                 progressbar.total = total_size
-                with open(os.path.join(file_dir, file.name), mode="wb") as f:
+                hash_md5 = hashlib.md5()
+                file_name_split = file.name.split(".")
+                file_name = ".".join(file_name_split[:1]) + "." + file.hash_val[:4]
+                if len(file_name_split) >= 2:
+                    file_name += "." + file_name_split[-1]
+                file_path = os.path.join(file_dir, file_name)
+                with open(file_path, mode="wb") as f:
                     with progressbar:
                         while True:
                             chunk = await resp.content.read(1024)
@@ -67,8 +74,10 @@ class Downloader:
                                 break
                             progressbar.update(len(chunk))
                             f.write(chunk)
+                            hash_md5.update(chunk)
                 self.processed += 1
                 self.update_bar()
+                self.md5_db[repr((file.course_name, file_name))] = hash_md5.hexdigest()
                 self.db[file.hash_val] = file.timemodified
                 self.queue.task_done()
             except Exception:
@@ -100,4 +109,5 @@ class Downloader:
         await asyncio.gather(*self.tasks, return_exceptions=True)
         await self.session.close()
         self.db.close()
+        self.md5_db.close()
         self.progressbar.close()

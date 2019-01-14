@@ -6,15 +6,17 @@ verify_ssl = true
 [dev-packages]
 mypy = "*"
 pylint = "*"
-autopep8 = "*"
 rope = "*"
+black = "*"
 
 [packages]
 aiohttp = "*"
 beautifulsoup4 = "*"
 aiostream = "*"
 tqdm = "*"
-colorama = {version = "*", sys_platform = "== 'win32'"}
+colorama = {version = "*",sys_platform = "== 'win32'"}
+google-api-python-client = "*"
+oauth2client = "*"
 
 [requires]
 python_version = "3.7"

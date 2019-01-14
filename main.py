@@ -21,9 +21,9 @@ async def main() -> None:
 
     while True:
         if username == "":
-            username = input('StudentID: ')
+            username = input("StudentID: ")
         if old_e3_pwd == "":
-            old_e3_pwd = getpass('Old E3 Password: ')
+            old_e3_pwd = getpass("Old E3 Password: ")
         if await old_e3.login(username, old_e3_pwd):
             break
         username, old_e3_pwd = "", ""
@@ -31,7 +31,7 @@ async def main() -> None:
 
     while True:
         if new_e3_pwd == "":
-            new_e3_pwd = getpass('New E3 Password: ')
+            new_e3_pwd = getpass("New E3 Password: ")
         if not new_e3_pwd:
             new_e3_pwd = old_e3_pwd
         if await new_e3.login(username, new_e3_pwd):
@@ -40,8 +40,7 @@ async def main() -> None:
         print("New E3 Password Error")
 
     downloader = Downloader(download_path)
-    async with stream.merge(new_e3.all_files(),
-                            old_e3.all_files()).stream() as files:
+    async with stream.merge(new_e3.all_files(), old_e3.all_files()).stream() as files:
         async for file in files:
             downloader.add_file(file)
     await downloader.done()

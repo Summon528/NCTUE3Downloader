@@ -25,7 +25,7 @@ async def main() -> None:
     old_e3_pwd = config.get("oldE3Password", "")
     new_e3_pwd = config.get("newE3Password", "")
     download_path = config.get("downloadPath", "e3")
-    gdrive_enable = config.get("gdrive_enable", False)
+    gdrive_enable = config.get("gdrive_enable", True)
     download_path = os.path.expanduser(download_path)
 
     if gdrive_enable:

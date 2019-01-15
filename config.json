@@ -3,5 +3,5 @@
   "oldE3Password": "",
   "newE3Password": "",
   "downloadPath": "e3",
-  "gdrive_enable": false
+  "gdrive_enable": true
 }

@@ -1,20 +1,20 @@
-import googleapiclient.discovery
 import httplib2
-from apiclient.http import MediaFileUpload
-from gdrive_executor import GDriveExecutor
-from oauth2client import file as oauth_file
-import json
 import os
 import shelve
 import asyncio
+import json
+import googleapiclient.discovery
+from googleapiclient.http import MediaFileUpload
+from oauth2client import file as oauth_file
+from .gdrive_executor import GDriveExecutor
 
 
 class GDrive:
-    def __init__(self, download_path):
+    def __init__(self, download_path: str) -> None:
         self.download_path = download_path
-        self.gdrive_excutor = GDriveExecutor()
+        self.gdrive_executor = GDriveExecutor()
 
-    async def upload(self):
+    async def upload(self) -> None:
         store = oauth_file.Storage("token.json")
         creds = store.get()
         service = googleapiclient.discovery.build(
@@ -85,7 +85,7 @@ class GDrive:
                         "parents": [folder_id_map[course]],
                     }
                     media = MediaFileUpload(os.path.join(course_path, course_file))
-                    self.gdrive_excutor.add_job(
+                    self.gdrive_executor.add_job(
                         course_file,
                         service.files().create(
                             body=file_metadata, media_body=media, fields="id"
@@ -94,13 +94,26 @@ class GDrive:
                 else:
                     file_id, file_md5 = gdrive_map[course_file]
                     if md5_db.get(repr((course, course_file)), None) == file_md5:
-                        self.gdrive_excutor.ignore()
+                        self.gdrive_executor.ignore()
                         continue
                     media = MediaFileUpload(os.path.join(course_path, course_file))
-                    self.gdrive_excutor.add_job(
+                    self.gdrive_executor.add_job(
                         course_file,
                         service.files().update(
                             fileId=file_id, media_body=media, fields="id"
                         ),
                     )
-        await self.gdrive_excutor.done()
+        await self.gdrive_executor.done()
+
+
+async def main():
+    with open("config.json", "r") as f:
+        config = json.loads(f.read())
+        download_path = config["downloadPath"]
+    download_path = os.path.expanduser(download_path)
+    gdrive = GDrive(download_path)
+    await gdrive.upload()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

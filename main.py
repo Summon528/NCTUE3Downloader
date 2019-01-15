@@ -5,10 +5,10 @@ from oauth2client import file as oauth_file
 from oauth2client import client, tools
 from getpass import getpass
 from aiostream import stream
-from new_e3 import NewE3
-from old_e3 import OldE3
-from downloader import Downloader
-from gdrive import GDrive
+from src.new_e3 import NewE3
+from src.old_e3 import OldE3
+from src.downloader import Downloader
+from src.gdrive import GDrive
 
 
 SCOPES = "https://www.googleapis.com/auth/drive"
@@ -59,11 +59,21 @@ async def main() -> None:
     async with stream.merge(new_e3.all_files(), old_e3.all_files()).stream() as files:
         async for file in files:
             downloader.add_file(file)
-    await downloader.done()
+    modified_files = await downloader.done()
 
     if gdrive_enable:
         gdirve_client = GDrive(download_path)
         await gdirve_client.upload()
+
+    print("")
+
+    if modified_files:
+        print("The below files are added or modified")
+        modified_files.sort(key=lambda x: x.course_name)
+        for modified_file in modified_files:
+            print(f"{modified_file.course_name} - {modified_file.name}")
+    else:
+        print("No files are added or modified")
 
 
 if __name__ == "__main__":

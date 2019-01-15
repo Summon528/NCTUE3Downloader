@@ -7,7 +7,7 @@ StrOrURL = Union[str, URL]
 
 
 class ASPSession:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__view_state = ""
         self.__client_session = ClientSession()
 

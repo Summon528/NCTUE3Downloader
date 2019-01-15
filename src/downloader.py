@@ -7,7 +7,8 @@ import hashlib
 import platform
 import aiohttp
 from tqdm import tqdm
-from models import E3File
+from typing import List
+from .models import E3File
 
 
 class Downloader:
@@ -26,6 +27,7 @@ class Downloader:
         self.progressbar = tqdm(position=0, bar_format="{desc}", total=1)
         self.progressbar.set_description_str("Initializing...")
         self.download_path = download_path
+        self.modified_files: List[E3File] = []
 
     def update_bar(self) -> None:
         self.progressbar.set_description_str(
@@ -47,6 +49,7 @@ class Downloader:
                     unit_divisor=1024,
                     position=idx + 1,
                     ascii=platform.system() == "Windows",
+                    leave=False,
                 )
                 try:
                     resp = await self.session.get(file.url)
@@ -99,10 +102,11 @@ class Downloader:
         ):
             self.processed += 1
         else:
+            self.modified_files.append(file)
             self.queue.put_nowait(file)
         self.update_bar()
 
-    async def done(self) -> None:
+    async def done(self) -> List[E3File]:
         await self.queue.join()
         for task in self.tasks:
             task.cancel()
@@ -111,3 +115,4 @@ class Downloader:
         self.db.close()
         self.md5_db.close()
         self.progressbar.close()
+        return self.modified_files

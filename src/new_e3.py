@@ -5,8 +5,8 @@ import time
 from getpass import getpass
 from typing import Dict, Iterable, AsyncIterable
 from aiohttp import ClientSession
-from models import E3File, Folder, Course, FolderType
-from utils import sha1_hash2
+from .models import E3File, Folder, Course, FolderType
+from .utils import sha1_hash2
 
 
 class NewE3:

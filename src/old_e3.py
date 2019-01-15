@@ -7,8 +7,8 @@ from datetime import datetime
 from typing import Iterable, NamedTuple, AsyncIterable
 from aiostream import stream
 from bs4 import BeautifulSoup
-from models import Course, E3File, FolderType
-from asp_session import ASPSession
+from .models import Course, E3File, FolderType
+from .asp_session import ASPSession
 
 
 class OldE3:

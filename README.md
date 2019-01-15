@@ -8,7 +8,8 @@ pip install pipenv
 git clone https://github.com/Summon528/NCTUE3Downloader
 cd NCTUE3Downloader
 pipenv install
-pipenv run python main.py
+pipenv shell
+python main.py
 ```
 ### OR
 ``` sh

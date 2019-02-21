@@ -65,7 +65,7 @@ class Downloader:
                 progressbar.total = total_size
                 hash_md5 = hashlib.md5()
                 file_name_split = file.name.split(".")
-                file_name = ".".join(file_name_split[:1]) + "." + file.hash_val[:4]
+                file_name = ".".join(file_name_split[:-1]) + "." + file.hash_val[:4]
                 if len(file_name_split) >= 2:
                     file_name += "." + file_name_split[-1]
                 file_path = os.path.join(file_dir, file_name)

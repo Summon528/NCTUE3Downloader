@@ -7,7 +7,7 @@ verify_ssl = true
 mypy = "*"
 pylint = "*"
 rope = "*"
-black = "*"
+black = "==19.3b0"
 
 [packages]
 aiohttp = "*"

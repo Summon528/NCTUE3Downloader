@@ -22,7 +22,9 @@ async def main() -> None:
         config = json.loads(f.read())
 
     username = config.get("studentId", "")
-    old_e3_pwd = config.get("oldE3Password", "")
+    old_e3_enable = config.get("old_e3_enable", False)
+    if old_e3_enable:
+        old_e3_pwd = config.get("oldE3Password", "")
     new_e3_pwd = config.get("newE3Password", "")
     download_path = config.get("downloadPath", "e3")
     gdrive_enable = config.get("gdrive_enable", True)
@@ -35,28 +37,33 @@ async def main() -> None:
             flow = client.flow_from_clientsecrets("credentials.json", SCOPES)
             creds = tools.run_flow(flow, store)
 
+    if old_e3_enable:
+        while True:
+            if username == "":
+                username = input("StudentID: ")
+            if old_e3_pwd == "":
+                old_e3_pwd = getpass("Old E3 Password: ")
+            if await old_e3.login(username, old_e3_pwd):
+                break
+            username, old_e3_pwd = "", ""
+            print("ID or Old E3 Password Error")
+
     while True:
         if username == "":
             username = input("StudentID: ")
-        if old_e3_pwd == "":
-            old_e3_pwd = getpass("Old E3 Password: ")
-        if await old_e3.login(username, old_e3_pwd):
-            break
-        username, old_e3_pwd = "", ""
-        print("ID or Old E3 Password Error")
-
-    while True:
         if new_e3_pwd == "":
             new_e3_pwd = getpass("New E3 Password: ")
-        if not new_e3_pwd:
-            new_e3_pwd = old_e3_pwd
         if await new_e3.login(username, new_e3_pwd):
             break
         new_e3_pwd = ""
-        print("New E3 Password Error")
+        print("Id or New E3 Password Error")
 
     downloader = Downloader(download_path)
-    async with stream.merge(new_e3.all_files(), old_e3.all_files()).stream() as files:
+    if old_e3_enable:
+        e3_stream = stream.merge(new_e3.all_files(), old_e3.all_files()).stream()
+    else:
+        e3_stream = stream.merge(new_e3.all_files()).stream()
+    async with e3_stream as files:
         async for file in files:
             downloader.add_file(file)
     modified_files = await downloader.done()

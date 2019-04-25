@@ -76,10 +76,13 @@ class OldE3:
 
     async def _get_course_list(self, session: ASPSession) -> Iterable[Course]:
         soup = await session.get(self._url + "/enter_course_index.aspx")
-        return (
-            Course(el["id"].replace("_", "$"), el.text)
-            for el in soup.find(id="ctl00_ContentPlaceHolder1_gvCourse")("a")
-        )
+        course_list_el = soup.find(id="ctl00_ContentPlaceHolder1_gvCourse")
+        if course_list_el is not None:
+            return (
+                Course(el["id"].replace("_", "$"), el.text)
+                for el in course_list_el("a")
+            )
+        return []
 
     async def _to_course_page(self, session: ASPSession, course: Course) -> None:
         await session.post(
@@ -227,11 +230,16 @@ class OldE3:
         if self._logged_in_session is None:
             raise RuntimeError("Please Login First")
         courses = list(await self._get_course_list(self._logged_in_session))
-        gens = [self._get_course_all_files(course) for course in courses[:-1]]
-        gens.append(self._get_course_all_files(courses[-1], self._logged_in_session))
-        async with stream.merge(*gens).stream() as files:
-            async for file in files:
-                yield file
+        if courses:
+            gens = [self._get_course_all_files(course) for course in courses[:-1]]
+            gens.append(
+                self._get_course_all_files(courses[-1], self._logged_in_session)
+            )
+            async with stream.merge(*gens).stream() as files:
+                async for file in files:
+                    yield file
+        else:
+            await self._logged_in_session.close()
         self._logged_in_session = None
 
 
